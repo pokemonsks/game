@@ -1,1 +1,1028 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>那個週五下午 - 資訊素養互動遊戲</title>
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --danger: #E74C3C;
+            --success: #2ECC71;
+            --dark: #2C3E50;
+            --light: #ECF0F1;
+            --wa-green: #dcf8c6;
+            --wa-bg: #ece5dd;
+        }
 
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'PingFang HK', 'Microsoft JhengHei', sans-serif;
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 1024px;
+            height: 100%;
+            max-height: 768px;
+            background-color: #000;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* --- Backgrounds --- */
+        .bg-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover;
+            background-position: center;
+            transition: opacity 0.5s;
+        }
+        
+        .bg-bedroom {
+            background: linear-gradient(to bottom, #2b3a4a, #1a2530);
+        }
+        .bg-bedroom::after { /* Desk & Window */
+            content: '';
+            position: absolute; bottom: 0; left: 10%; width: 80%; height: 40%;
+            background: #4a3b2c; border-radius: 20px 20px 0 0;
+            box-shadow: inset 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .bg-livingroom {
+            background: linear-gradient(to bottom, #d4a373, #faedcd);
+        }
+        .bg-livingroom::after { /* Sofa */
+            content: '';
+            position: absolute; bottom: 10%; left: 20%; width: 60%; height: 30%;
+            background: #ccd5ae; border-radius: 20px;
+        }
+
+        .bg-classroom {
+            background: linear-gradient(to bottom, #e9ecef, #dee2e6);
+        }
+        .bg-classroom::after { /* Blackboard */
+            content: '';
+            position: absolute; top: 10%; left: 15%; width: 70%; height: 40%;
+            background: #2b6e4f; border: 10px solid #8b5a2b; border-radius: 5px;
+        }
+
+        /* --- Top Bar --- */
+        #top-bar {
+            position: absolute;
+            top: 0; left: 0; width: 100%;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-shadow: 1px 1px 3px black;
+        }
+
+        #timeline {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        #score-container {
+            background: rgba(0,0,0,0.5);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .score-shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+            color: var(--danger) !important;
+            background: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+            40%, 60% { transform: translate3d(8px, 0, 0); }
+        }
+
+        .score-deduct-anim {
+            position: absolute;
+            right: 30px;
+            top: 60px;
+            color: var(--danger);
+            font-weight: bold;
+            font-size: 2rem;
+            text-shadow: 2px 2px 0 #fff;
+            opacity: 0;
+            animation: floatUp 1s ease-out;
+            z-index: 100;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
+        }
+
+        /* --- Characters --- */
+        #character-layer {
+            position: absolute;
+            bottom: 25%;
+            left: 0; width: 100%; height: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            z-index: 5;
+            pointer-events: none;
+        }
+        
+        .char-sprite {
+            height: 100%;
+            max-height: 400px;
+            transition: opacity 0.3s, transform 0.3s;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+        }
+
+        /* --- Dialogue Box --- */
+        #dialogue-container {
+            position: absolute;
+            bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            background: rgba(255, 255, 255, 0.95);
+            border: 4px solid var(--primary);
+            border-radius: 15px;
+            padding: 20px;
+            z-index: 20;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #speaker-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+        }
+
+        #dialogue-text {
+            font-size: 1.3rem;
+            line-height: 1.6;
+            color: var(--dark);
+            min-height: 3.2em;
+        }
+
+        .typing-cursor::after {
+            content: '▼';
+            animation: blink 1s infinite;
+            color: var(--primary);
+            font-size: 1rem;
+            margin-left: 5px;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* --- Choices --- */
+        #choices-container {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            gap: 15px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            padding: 20px;
+        }
+
+        #choices-container.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .choice-btn {
+            width: 80%;
+            max-width: 600px;
+            background: white;
+            border: 3px solid var(--primary);
+            border-radius: 10px;
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--dark);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .choice-btn:hover {
+            transform: scale(1.02);
+            background: #f0f8ff;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .choice-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* --- WhatsApp UI Simulation --- */
+        #whatsapp-container {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 350px;
+            height: 600px;
+            background: var(--wa-bg);
+            border-radius: 30px;
+            border: 10px solid #333;
+            z-index: 15;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        #whatsapp-container.active {
+            display: flex;
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .wa-header {
+            background: #075E54;
+            color: white;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .wa-header-icon {
+            width: 40px; height: 40px;
+            background: #ccc; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; overflow: hidden;
+        }
+
+        .wa-chat-area {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M10 10h10v10H10zM30 30h10v10H30zM50 10h10v10H50zM70 30h10v10H70z" fill="rgba(0,0,0,0.03)"/></svg>');
+        }
+
+        .wa-bubble {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 1rem;
+            position: relative;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .wa-received {
+            background: white;
+            align-self: flex-start;
+            border-top-left-radius: 0;
+        }
+
+        .wa-sent {
+            background: var(--wa-green);
+            align-self: flex-end;
+            border-top-right-radius: 0;
+        }
+
+        .wa-img {
+            width: 100%;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .wa-link {
+            color: #027eb5;
+            text-decoration: underline;
+        }
+
+        .wa-time {
+            font-size: 0.7rem;
+            color: #999;
+            text-align: right;
+            margin-top: 5px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .wa-ticks { color: #34B7F1; font-size: 0.8rem; }
+
+        /* --- Consequence / Ending Overlay --- */
+        #overlay-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 50;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            color: white;
+            text-align: center;
+        }
+
+        #overlay-title { font-size: 2.5rem; margin-bottom: 20px; font-weight: bold; }
+        #overlay-text { font-size: 1.3rem; line-height: 1.6; margin-bottom: 30px; max-width: 800px;}
+        
+        .restart-btn, .next-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.3rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .restart-btn:hover, .next-btn:hover { background: #357ABD; transform: scale(1.05); }
+
+        .review-card {
+            background: white; color: var(--dark); padding: 15px; border-radius: 10px;
+            margin-bottom: 15px; text-align: left; width: 100%; max-width: 600px;
+            border-left: 5px solid var(--primary);
+        }
+        
+        /* Start Screen */
+        #start-screen {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: #1a2530; z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: white; text-align: center;
+        }
+        #start-screen h1 { font-size: 3rem; margin-bottom: 10px; color: #4A90E2; text-shadow: 2px 2px 0 #fff;}
+        #start-screen p { font-size: 1.2rem; margin-bottom: 40px; color: #aaa;}
+
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    
+    <div id="start-screen">
+        <h1>那個週五下午</h1>
+        <p>小學四年級資訊素養與網絡安全互動遊戲</p>
+        <button class="next-btn" onclick="startGame()">開始遊戲</button>
+    </div>
+
+    <div id="top-bar">
+        <div id="timeline">🕒 <span id="time-display">15:30</span></div>
+        <div id="score-container">🛡️ 安全值: <span id="score-display">100</span></div>
+    </div>
+
+    <div id="bg" class="bg-layer bg-bedroom"></div>
+
+    <div id="character-layer"></div>
+
+    <div id="whatsapp-container">
+        <div class="wa-header">
+            <div class="wa-header-icon" id="wa-icon">👤</div>
+            <div id="wa-name">聯絡人</div>
+        </div>
+        <div class="wa-chat-area" id="wa-chat"></div>
+    </div>
+
+    <div id="dialogue-container" onclick="advanceStory()">
+        <div id="speaker-name">旁白</div>
+        <div id="dialogue-text"></div>
+    </div>
+
+    <div id="choices-container"></div>
+
+    <div id="overlay-screen">
+        <div id="overlay-title"></div>
+        <div id="overlay-text"></div>
+        <div id="overlay-cards"></div>
+        <button id="overlay-btn" class="next-btn" onclick="closeOverlay()">繼續</button>
+    </div>
+
+</div>
+
+<script>
+    // --- State Variables ---
+    let score = 100;
+    let currentSceneId = "intro_1";
+    let typeWriterInterval;
+    let isTyping = false;
+    let fullTextToType = "";
+    let flags = {
+        event1_accepted: false
+    };
+
+    // --- SVG Character Generator ---
+    function getSvgChar(type, expression = 'normal') {
+        const colors = {
+            xiaoming: { shirt: '#4A90E2', skin: '#fcd5ce', hair: '#3e2723' },
+            mom: { shirt: '#FF9800', skin: '#fcd5ce', hair: '#4e342e' },
+            dad: { shirt: '#34495E', skin: '#fcd5ce', hair: '#212121' },
+            zhihao: { shirt: '#2ECC71', skin: '#f5b7b1', hair: '#1c2833' },
+            ahzhen: { shirt: '#E74C3C', skin: '#fae5d3', hair: '#6e2c00' },
+            ahwei: { shirt: '#95A5A6', skin: '#edbb99', hair: '#2e4053' },
+            ahfeng: { shirt: '#F1C40F', skin: '#fcd5ce', hair: '#873600' },
+            eric: { shirt: '#555', skin: '#777', hair: '#333' }
+        };
+
+        const c = colors[type] || colors.xiaoming;
+        
+        let eyes = '<circle cx="35" cy="45" r="4" fill="black"/><circle cx="65" cy="45" r="4" fill="black"/>';
+        let mouth = '<path d="M 40 60 Q 50 70 60 60" stroke="black" stroke-width="2" fill="none"/>';
+        let extra = '';
+
+        if (type === 'eric') {
+            return `<svg viewBox="0 0 100 100" class="char-sprite">
+                <path d="M 20 100 L 20 70 Q 50 50 80 70 L 80 100 Z" fill="${c.shirt}"/>
+                <circle cx="50" cy="40" r="25" fill="${c.skin}"/>
+                <text x="50" y="55" font-size="40" font-weight="bold" fill="white" text-anchor="middle">?</text>
+            </svg>`;
+        }
+
+        if (expression === 'happy') {
+            mouth = '<path d="M 40 60 Q 50 75 60 60 Z" fill="#e74c3c"/>';
+        } else if (expression === 'sad' || expression === 'worried') {
+            mouth = '<path d="M 40 65 Q 50 55 60 65" stroke="black" stroke-width="2" fill="none"/>';
+            eyes = '<path d="M 30 45 L 40 40 M 70 45 L 60 40" stroke="black" stroke-width="2"/>' + eyes;
+        } else if (expression === 'shocked') {
+            mouth = '<circle cx="50" cy="65" r="6" fill="black"/>';
+        } else if (expression === 'cry') {
+             mouth = '<path d="M 40 65 Q 50 55 60 65" stroke="black" stroke-width="2" fill="none"/>';
+             extra = '<path d="M 35 52 L 35 60 M 65 52 L 65 60" stroke="#3498db" stroke-width="2" stroke-dasharray="2,2"/>';
+        }
+
+        // Hair styles
+        let hairSvg = `<path d="M 25 40 Q 50 10 75 40 Q 50 20 25 40 Z" fill="${c.hair}"/>`;
+        if(type === 'mom') hairSvg = `<path d="M 20 50 Q 50 0 80 50 L 70 80 L 30 80 Z" fill="${c.hair}"/>`;
+        if(type === 'ahzhen') hairSvg = `<path d="M 25 40 Q 50 10 75 40 L 85 70 L 15 70 Z" fill="${c.hair}"/>`;
+
+        return `<svg viewBox="0 0 100 100" class="char-sprite">
+            <!-- Body -->
+            <path d="M 15 100 L 25 65 Q 50 60 75 65 L 85 100 Z" fill="${c.shirt}"/>
+            <!-- Head -->
+            <circle cx="50" cy="45" r="25" fill="${c.skin}"/>
+            <!-- Hair -->
+            ${hairSvg}
+            <!-- Face -->
+            ${eyes}
+            ${mouth}
+            ${extra}
+        </svg>`;
+    }
+
+    // --- Story Data ---
+    const storyData = {
+        "intro_1": {
+            bg: "bg-bedroom", time: "15:30", speaker: "旁白", char: "xiaoming", exp: "normal",
+            text: "週五下午三點半，小明放學回家。媽媽還在上班，家裡只有他一個人。",
+            next: "intro_2"
+        },
+        "intro_2": {
+            bg: "bg-bedroom", time: "15:32", speaker: "小明", char: "xiaoming", exp: "happy",
+            text: "換好衫啦！趁媽媽未返，先玩陣平板電腦輕鬆下，遲啲先做功課啦！",
+            next: "event1_1"
+        },
+        
+        // EVENT 1: Friend Request
+        "event1_1": {
+            bg: "bg-bedroom", time: "15:45", speaker: "旁白",
+            text: "小明打開學習平台，突然彈出一個交友邀請。",
+            next: "event1_wa"
+        },
+        "event1_wa": {
+            type: "whatsapp", time: "15:45", waName: "Eric哥", waIcon: getSvgChar('eric'),
+            messages: [
+                { type: "received", text: "你好，我係你同學志豪嘅表哥。佢叫我加你，話你地係好朋友呀！" }
+            ],
+            next: "event1_choice"
+        },
+        "event1_choice": {
+            type: "choice", bg: "bg-bedroom", time: "15:46", speaker: "小明", char: "xiaoming", exp: "worried",
+            text: "志豪的確係我好朋友...但係我未見過佢表哥。應該點做好呢？",
+            choices: [
+                { text: "A. 直接接受邀請，回覆「你好」", score: -20, next: "event1_A_1" },
+                { text: "B. 先用 WhatsApp 問志豪本人確認", score: 0, next: "event1_B_1" },
+                { text: "C. 覺得可疑，直接拒絕申請", score: 0, next: "event1_C_1" }
+            ]
+        },
+        "event1_A_1": {
+            type: "whatsapp", time: "15:47", waName: "Eric哥", waIcon: getSvgChar('eric'),
+            onEnter: () => { flags.event1_accepted = true; },
+            messages: [
+                { type: "sent", text: "你好！" },
+                { type: "received", text: "你係咪讀XX小學四年級？我細佬都係讀嗰間，想確認下。" }
+            ],
+            next: "event1_A_2"
+        },
+        "event1_A_2": {
+            bg: "bg-bedroom", time: "15:48", speaker: "旁白", char: "xiaoming", exp: "normal",
+            text: "小明覺得對方既然係同學表哥，應該好正常，於是如實回答了學校、班別甚至自己的全名。",
+            consequence: "你隨便將個人資料交給了未經核實的陌生人！這非常危險。",
+            next: "event2_1"
+        },
+        "event1_B_1": {
+            type: "whatsapp", time: "15:48", waName: "志豪", waIcon: getSvgChar('zhihao'),
+            messages: [
+                { type: "sent", text: "志豪，你有個表哥叫 Eric 申請加我好友，係咪你叫佢加我㗎？" },
+                { type: "received", text: "吓？我冇表哥叫 Eric 喎！你唔好亂加呀，可能係呃人㗎！" }
+            ],
+            next: "event1_B_2"
+        },
+        "event1_B_2": {
+            bg: "bg-bedroom", time: "15:49", speaker: "小明", char: "xiaoming", exp: "shocked",
+            text: "好彩我有問清楚志豪！原來係假冒嘅，差啲就上當！",
+            consequence: "做得好！遇到陌生人聲稱是熟人的親戚朋友，一定要先向熟人求證。",
+            next: "event2_1"
+        },
+        "event1_C_1": {
+            bg: "bg-bedroom", time: "15:47", speaker: "小明", char: "xiaoming", exp: "normal",
+            text: "網上太多壞人，唔認識嘅人我都係唔好亂加比較安全。",
+            consequence: "正確的決定！拒絕不明來歷的好友申請是保護自己的第一步。",
+            next: "event2_1"
+        },
+
+        // EVENT 2: Winning Message
+        "event2_1": {
+            bg: "bg-livingroom", time: "16:10", speaker: "旁白",
+            text: "小明出廳攞水飲，發現媽媽部平板電腦漏咗喺屋企未登出，突然彈出一個 WhatsApp 訊息。",
+            next: "event2_wa"
+        },
+        "event2_wa": {
+            type: "whatsapp", time: "16:10", waName: "未知號碼", waIcon: '<div style="font-size:24px">🎁</div>',
+            messages: [
+                { type: "received", text: "🎉 恭喜！您的號碼被系統隨機抽中獲得全新 iPhone 17 一部！" },
+                { type: "received", text: "請於今日內點擊以下連結填寫領獎表格（需提供姓名、地址、聯絡電話），逾期作廢！ <br><span class='wa-link'>http://win-iphone17-hk.xyz/claim</span>" }
+            ],
+            next: "event2_choice"
+        },
+        "event2_choice": {
+            type: "choice", bg: "bg-livingroom", time: "16:11", speaker: "小明", char: "xiaoming", exp: "normal",
+            text: "媽媽平時返工好辛苦，部手機又舊...如果我幫佢填表贏部新手機，佢一定好開心！",
+            choices: [
+                { text: "A. 立即點擊連結，幫媽媽填寫姓名和地址", score: -30, next: "event2_A_check" },
+                { text: "B. 覺得好可疑，等媽媽放工返嚟先話佢知", score: 0, next: "event2_B" },
+                { text: "C. 截圖並在家庭群組提醒大家「呢個可能係詐騙」", score: 0, next: "event2_C" }
+            ]
+        },
+        "event2_A_check": {
+            type: "logic",
+            action: () => {
+                if(flags.event1_accepted) advanceToScene("event2_A_bad");
+                else advanceToScene("event2_A_mild");
+            }
+        },
+        "event2_A_bad": {
+            bg: "bg-livingroom", time: "18:00", speaker: "旁白", char: "mom", exp: "shocked",
+            text: "兩小時後，媽媽慌忙地打電話返屋企：「小明！頭先有陌生人打畀我，竟然講得出我哋屋企地址同你全名！好恐怖！」",
+            next: "event2_A_bad_2"
+        },
+        "event2_A_bad_2": {
+            bg: "bg-livingroom", time: "18:05", speaker: "小明", char: "xiaoming", exp: "cry",
+            text: "（大喊）對唔住呀媽媽...我下晝加咗個唔識嘅人，又填咗個抽獎表格...原來全部都係呃人收集資料㗎...",
+            consequence: "極度危險！結合之前的洩露，騙徒已掌握你家人的詳細資料。千萬不要貪圖小便宜填寫不明表格。",
+            next: "event3_1"
+        },
+        "event2_A_mild": {
+            bg: "bg-livingroom", time: "18:30", speaker: "媽媽", char: "mom", exp: "worried",
+            text: "小明，你點可以亂填地址㗎！呢啲叫「網絡釣魚」，專呃人填個人資料。如果佢哋上門或者用資料去借錢就慘啦！",
+            consequence: "你中了釣魚騙局！天下沒有免費的午餐，涉及個人資料的要求極大機會是詐騙。",
+            next: "event3_1"
+        },
+        "event2_B": {
+            bg: "bg-livingroom", time: "18:30", speaker: "媽媽", char: "mom", exp: "happy",
+            text: "小明，好彩你冇亂撳！呢啲「中獎」訊息100%係騙局，專呃人填資料。你做得好好！",
+            consequence: "冷靜的判斷！遇到要求提供資料的可疑中獎訊息，不理會是最好的做法。",
+            next: "event3_1"
+        },
+        "event2_C": {
+            bg: "bg-livingroom", time: "18:30", speaker: "媽媽", char: "mom", exp: "happy",
+            text: "收到你群組嘅提醒啦！小明真係叻，識得分辨詐騙資訊，仲識得保護屋企人！",
+            consequence: "完美的處理！不但保護了自己，還提升了身邊人的防騙意識。",
+            next: "event3_1"
+        },
+
+        // EVENT 3: Free Movie
+        "event3_1": {
+            bg: "bg-bedroom", time: "17:00", speaker: "旁白",
+            text: "小明返入房繼續做功課。突然，好朋友阿峰傳來訊息。",
+            next: "event3_wa"
+        },
+        "event3_wa": {
+            type: "whatsapp", time: "17:00", waName: "阿峰", waIcon: getSvgChar('ahfeng'),
+            messages: [
+                { type: "received", text: "喂！我搵到個超級正嘅網站，可以免費下載最新嗰套卡通大電影呀！" },
+                { type: "received", text: "我已經睇緊啦，畫質超好！你快啲下載啦：<br><span class='wa-link'>http://free-movies-dl-xyz.com/movie.exe</span>" }
+            ],
+            next: "event3_choice"
+        },
+        "event3_choice": {
+            type: "choice", bg: "bg-bedroom", time: "17:01", speaker: "小明", char: "xiaoming", exp: "normal",
+            text: "嗰套戲我一直好想睇，但爸爸話最近太忙冇時間帶我去戲院...如果依家可以免費睇...",
+            choices: [
+                { text: "A. 立即點擊連結下載，先睹為快", score: -20, next: "event3_A_1" },
+                { text: "B. 先喺網上搜尋一下該網站名稱，睇下有冇問題", score: 0, next: "event3_B" },
+                { text: "C. 告訴阿峰這可能是盜版或惡意網站，叫佢立即停止", score: 0, next: "event3_C" }
+            ]
+        },
+        "event3_A_1": {
+            bg: "bg-bedroom", time: "17:15", speaker: "旁白", char: "xiaoming", exp: "shocked",
+            text: "下載完成後，電影沒有播放。平板電腦突然變得極度緩慢，畫面不斷彈出奇怪的廣告，甚至無法關機！",
+            next: "event3_A_2"
+        },
+        "event3_A_2": {
+            bg: "bg-bedroom", time: "19:00", speaker: "爸爸", char: "dad", exp: "worried",
+            text: "唉，你下載咗惡意軟件（病毒）呀。部機要完全格式化，你今個星期做落嘅功課檔案全部冇晒啦。",
+            consequence: "下載不明來源的檔案極易感染電腦病毒，而且下載盜版電影是侵權行為！代價是重做所有功課。",
+            next: "event4_1"
+        },
+        "event3_B": {
+            bg: "bg-bedroom", time: "17:05", speaker: "小明", char: "xiaoming", exp: "worried",
+            text: "等我 search 下...嘩！網上好多人投訴呢個網，話下載完之後部機中咗毒，所有密碼畀人偷晒！",
+            consequence: "善用搜尋引擎查證！你避開了惡意軟件的陷阱。",
+            next: "event4_1"
+        },
+        "event3_C": {
+            type: "whatsapp", time: "17:05", waName: "阿峰", waIcon: getSvgChar('ahfeng'),
+            messages: [
+                { type: "sent", text: "阿峰，呢啲免費下載網多數都有病毒，而且係侵犯版權㗎，你快啲刪除佢啦！" },
+                { type: "received", text: "怕咩呀，我部機依家不知幾正常。你唔睇就算。" }
+            ],
+            next: "event3_C_2"
+        },
+        "event3_C_2": {
+            bg: "bg-bedroom", time: "三天後", speaker: "旁白", char: "xiaoming", exp: "normal",
+            text: "三天後，阿峰哭著告訴小明，他的平板中了勒索軟件，所有遊戲存檔和照片都沒了。",
+            consequence: "堅持正確的價值觀！尊重知識產權，不點擊可疑連結。",
+            next: "event4_1"
+        },
+
+        // EVENT 4: Cyberbullying
+        "event4_1": {
+            bg: "bg-bedroom", time: "17:30", speaker: "旁白",
+            text: "功課差不多做完時，班級 WhatsApp 群組突然瘋狂彈出訊息。",
+            next: "event4_wa"
+        },
+        "event4_wa": {
+            type: "whatsapp", time: "17:30", waName: "4A班群組", waIcon: '<div style="font-size:20px">🏫</div>',
+            messages: [
+                { type: "received", text: "阿偉: 喂大家睇下！我將阿珍張相P咗做豬頭，超好笑！🤣🤣🤣" },
+                { type: "received", text: "阿偉: <div style='background:#ddd; width:150px; height:100px; display:flex; justify-content:center; align-items:center; border-radius:10px;'><span style='font-size:30px'>🐷</span></div>" },
+                { type: "received", text: "同學甲: 哈哈哈，真係好似呀！" },
+                { type: "received", text: "同學乙: forward 去隔離班 group 先！" }
+            ],
+            next: "event4_choice"
+        },
+        "event4_choice": {
+            type: "choice", bg: "bg-bedroom", time: "17:32", speaker: "小明", char: "xiaoming", exp: "worried",
+            text: "阿珍冇喺呢個群組入面。睇住張相，我覺得好唔舒服，阿珍平時幾乖...但其他同學都喺度笑...",
+            choices: [
+                { text: "A. 覺得好玩，跟著大家笑，並轉發給其他朋友", score: -30, next: "event4_A" },
+                { text: "B. 覺得唔好，但唔敢出聲，只係靜靜地睇住", score: -10, next: "event4_B" },
+                { text: "C. 截圖保留證據，退出群組，並即時告訴父母聯絡老師", score: 0, next: "event4_C" }
+            ]
+        },
+        "event4_A": {
+            bg: "bg-classroom", time: "翌日早上", speaker: "老師", char: "xiaoming", exp: "cry",
+            text: "（老師極度嚴肅）阿珍尋晚喊到崩潰。警方已經介入調查呢宗嚴重的網絡欺凌事件。所有轉發過照片的同學，都要見家長及接受處分！",
+            consequence: "你成為了網絡欺凌的幫兇！轉發惡意改圖會對受害者造成極大心理傷害，甚至觸犯法律。",
+            next: "ending_check"
+        },
+        "event4_B": {
+            bg: "bg-classroom", time: "翌日早上", speaker: "老師", char: "xiaoming", exp: "worried",
+            text: "相片喺網上瘋傳，阿珍今日唔敢返學。老師想講，即使你只係旁觀冇出聲阻止，你嘅沉默亦間接縱容咗欺凌行為發生。",
+            consequence: "旁觀者的沉默也是一種傷害。面對網絡欺凌，我們應該勇敢向可信賴的成年人求助。",
+            next: "ending_check"
+        },
+        "event4_C": {
+            bg: "bg-classroom", time: "翌日早上", speaker: "老師", char: "xiaoming", exp: "normal",
+            text: "多謝小明同學及時通知。老師同駐校社工已經即時處理，刪除咗相關相片，阿偉亦深刻反省咗。保護同學，你做得非常好！",
+            consequence: "見義勇為！截圖留證並向師長求助，是制止網絡欺凌的最佳方法。",
+            next: "ending_check"
+        },
+
+        // ENDINGS
+        "ending_check": {
+            type: "logic",
+            action: () => {
+                if(score === 100) advanceToScene("end_perfect");
+                else if(score >= 70) advanceToScene("end_good");
+                else advanceToScene("end_bad");
+            }
+        },
+        "end_perfect": {
+            type: "ending", title: "🏆 完美通關！你是真正的數碼智慧公民！",
+            text: "週日早上，全家人吃早餐，媽媽把這週的事告訴爸爸。爸爸摸摸小明的頭：「你做得好，網絡世界和現實世界一樣，到處都有陷阱，要懂得保護自己和朋友。」",
+            cards: [
+                "✔️ 遇到陌生好友申請：先核實身份，不隨便透露個人資料。",
+                "✔️ 收到中獎/索取資料訊息：保持冷靜，不貪小便宜，慎防網絡釣魚。",
+                "✔️ 面對免費下載誘惑：尊重知識產權，防範電腦病毒及惡意軟件。",
+                "✔️ 目擊網絡欺凌：不參與、不轉發、不旁觀，截圖求助師長。"
+            ]
+        },
+        "end_good": {
+            type: "ending", title: "⚠️ 有驚無險的週末",
+            text: "週末小明一個人坐在房間，回想這個週五，有些決定做對了，有些卻十分危險。網絡世界變化萬千，下次遇到類似情況，一定要更加小心判斷！",
+            cards: [
+                "請回顧你被扣分的地方，下次做出更安全的選擇！"
+            ]
+        },
+        "end_bad": {
+            type: "ending", title: "❌ 慘痛的週五",
+            text: "週末家裡氣氛沉重。資料外洩、電腦中毒、甚至捲入欺凌事件...每一個錯誤的選擇，都會在現實世界造成真實的傷害。你需要重新學習如何安全地上網。",
+            cards: [
+                "網絡安全不容忽視，請重新挑戰，學習正確的資訊素養知識！"
+            ]
+        }
+    };
+
+    // --- Core Engine Functions ---
+    const els = {
+        bg: document.getElementById('bg'),
+        time: document.getElementById('time-display'),
+        score: document.getElementById('score-display'),
+        charLayer: document.getElementById('character-layer'),
+        dialogueBox: document.getElementById('dialogue-container'),
+        speaker: document.getElementById('speaker-name'),
+        text: document.getElementById('dialogue-text'),
+        choices: document.getElementById('choices-container'),
+        whatsapp: document.getElementById('whatsapp-container'),
+        waIcon: document.getElementById('wa-icon'),
+        waName: document.getElementById('wa-name'),
+        waChat: document.getElementById('wa-chat'),
+        overlay: document.getElementById('overlay-screen')
+    };
+
+    function startGame() {
+        document.getElementById('start-screen').style.display = 'none';
+        score = 100;
+        updateScoreDisplay();
+        flags = { event1_accepted: false };
+        advanceToScene("intro_1");
+    }
+
+    function advanceToScene(sceneId) {
+        currentSceneId = sceneId;
+        const scene = storyData[sceneId];
+        
+        if(!scene) return;
+
+        if (scene.type === 'logic') {
+            scene.action();
+            return;
+        }
+
+        // Reset UI visibility
+        els.dialogueBox.style.display = 'flex';
+        els.whatsapp.classList.remove('active');
+        els.choices.classList.remove('active');
+        els.charLayer.innerHTML = '';
+        els.bg.style.filter = 'none';
+
+        if (scene.time) els.time.innerText = scene.time;
+        if (scene.bg) els.bg.className = `bg-layer ${scene.bg}`;
+
+        if (scene.type === 'whatsapp') {
+            renderWhatsApp(scene);
+        } else if (scene.type === 'choice') {
+            renderChoice(scene);
+        } else if (scene.type === 'ending') {
+            renderEnding(scene);
+        } else {
+            // Normal Dialogue
+            if (scene.char) {
+                els.charLayer.innerHTML = getSvgChar(scene.char, scene.exp);
+            }
+            els.speaker.innerText = scene.speaker;
+            typeWriterEffect(scene.text);
+        }
+
+        // Custom onEnter logic
+        if(scene.onEnter) scene.onEnter();
+    }
+
+    function typeWriterEffect(text) {
+        clearInterval(typeWriterInterval);
+        isTyping = true;
+        fullTextToType = text;
+        els.text.innerHTML = '<span class="typing-cursor"></span>';
+        let i = 0;
+        
+        typeWriterInterval = setInterval(() => {
+            if (i < text.length) {
+                els.text.innerHTML = text.substring(0, i + 1) + '<span class="typing-cursor"></span>';
+                i++;
+            } else {
+                clearInterval(typeWriterInterval);
+                isTyping = false;
+                els.text.innerHTML = text; // Remove cursor
+            }
+        }, 30);
+    }
+
+    function advanceStory() {
+        const scene = storyData[currentSceneId];
+        
+        // If typing, skip to end
+        if (isTyping) {
+            clearInterval(typeWriterInterval);
+            isTyping = false;
+            els.text.innerHTML = fullTextToType;
+            return;
+        }
+
+        // If it's a choice scene, clicking dialogue shouldn't advance
+        if (scene.type === 'choice') return;
+
+        // If there's a consequence overlay waiting, show it
+        if (scene.consequence) {
+            showOverlay("結果", scene.consequence, () => advanceToScene(scene.next));
+            delete scene.consequence; // show only once
+            return;
+        }
+
+        if (scene.next) {
+            advanceToScene(scene.next);
+        }
+    }
+
+    function renderWhatsApp(scene) {
+        els.dialogueBox.style.display = 'none';
+        els.bg.style.filter = 'brightness(0.3)';
+        els.whatsapp.classList.add('active');
+        
+        els.waIcon.innerHTML = scene.waIcon;
+        els.waName.innerText = scene.waName;
+        els.waChat.innerHTML = '';
+
+        let delay = 0;
+        scene.messages.forEach((msg, idx) => {
+            setTimeout(() => {
+                const bubble = document.createElement('div');
+                bubble.className = `wa-bubble ${msg.type === 'sent' ? 'wa-sent' : 'wa-received'}`;
+                bubble.innerHTML = msg.text + `<div class="wa-time">${scene.time} <span class="wa-ticks">✓✓</span></div>`;
+                els.waChat.appendChild(bubble);
+                els.waChat.scrollTop = els.waChat.scrollHeight;
+                
+                // If last message, enable click to continue
+                if(idx === scene.messages.length - 1) {
+                    setTimeout(() => {
+                        els.whatsapp.onclick = () => {
+                            els.whatsapp.onclick = null;
+                            advanceToScene(scene.next);
+                        };
+                        // Visual hint
+                        const hint = document.createElement('div');
+                        hint.style.textAlign = "center"; hint.style.color = "#888"; hint.style.fontSize = "0.8rem"; hint.innerText = "點擊畫面繼續";
+                        els.waChat.appendChild(hint);
+                        els.waChat.scrollTop = els.waChat.scrollHeight;
+                    }, 1000);
+                }
+            }, delay);
+            delay += 1000; // 1 second delay between messages
+        });
+    }
+
+    function renderChoice(scene) {
+        // Show context text in dialogue box
+        els.speaker.innerText = scene.speaker;
+        typeWriterEffect(scene.text);
+
+        if (scene.char) els.charLayer.innerHTML = getSvgChar(scene.char, scene.exp);
+
+        setTimeout(() => {
+            els.choices.innerHTML = '';
+            scene.choices.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.innerText = c.text;
+                btn.onclick = () => handleChoice(c);
+                els.choices.appendChild(btn);
+            });
+            els.choices.classList.add('active');
+        }, 1000); // Wait for text to type a bit
+    }
+
+    function handleChoice(choice) {
+        els.choices.classList.remove('active');
+        
+        if (choice.score < 0) {
+            deductScore(choice.score);
+        }
+        
+        advanceToScene(choice.next);
+    }
+
+    function deductScore(amount) {
+        score += amount;
+        if(score < 0) score = 0;
+        
+        // Update number
+        els.score.innerText = score;
+        
+        // Container shake & red background
+        const container = document.getElementById('score-container');
+        container.classList.add('score-shake');
+        
+        // Floating deduction text
+        const animText = document.createElement('div');
+        animText.className = 'score-deduct-anim';
+        animText.innerText = amount;
+        document.getElementById('top-bar').appendChild(animText);
+
+        setTimeout(() => {
+            container.classList.remove('score-shake');
+            animText.remove();
+        }, 1000);
+    }
+
+    function updateScoreDisplay() {
+        els.score.innerText = score;
+    }
+
+    let overlayCallback = null;
+    function showOverlay(title, text, callback) {
+        document.getElementById('overlay-title').innerText = title;
+        document.getElementById('overlay-text').innerHTML = text;
+        document.getElementById('overlay-cards').innerHTML = ''; // Clear cards
+        els.overlay.style.display = 'flex';
+        document.getElementById('overlay-btn').style.display = 'block';
+        overlayCallback = callback;
+    }
+
+    function closeOverlay() {
+        els.overlay.style.display = 'none';
+        if (overlayCallback) overlayCallback();
+    }
+
+    function renderEnding(scene) {
+        els.dialogueBox.style.display = 'none';
+        document.getElementById('top-bar').style.display = 'none';
+        
+        document.getElementById('overlay-title').innerText = scene.title;
+        document.getElementById('overlay-title').style.color = score === 100 ? '#f1c40f' : (score >= 70 ? 'white' : '#e74c3c');
+        
+        document.getElementById('overlay-text').innerHTML = `最終安全值：${score}/100<br><br>${scene.text}`;
+        
+        const cardsContainer = document.getElementById('overlay-cards');
+        cardsContainer.innerHTML = '';
+        if(scene.cards) {
+            scene.cards.forEach(cardText => {
+                const card = document.createElement('div');
+                card.className = 'review-card';
+                card.innerText = cardText;
+                cardsContainer.appendChild(card);
+            });
+        }
+
+        const btn = document.getElementById('overlay-btn');
+        btn.innerText = "重新遊玩";
+        btn.onclick = () => location.reload();
+
+        els.overlay.style.display = 'flex';
+    }
+
+</script>
+</body>
+</html>
